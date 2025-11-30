@@ -6,7 +6,9 @@ export default async function handler(req, res) {
   }
 
   const { amountAed, isTest, plan } = req.body;
-  const amountInFils = amountAed * 100;
+
+  // Convert AED → fils
+  const amountInFils = Math.round(amountAed * 100);
 
   try {
     const ziinaResponse = await axios.post(
@@ -14,24 +16,24 @@ export default async function handler(req, res) {
       {
         amount: amountInFils,
         test: isTest === true,
-        success_url: "https://YOUR-AI-STUDIO-DOMAIN/success",
-        cancel_url: "https://YOUR-AI-STUDIO-DOMAIN/cancel",
+        success_url: process.env.NEXT_PUBLIC_SITE_URL + "/success",
+        cancel_url: process.env.NEXT_PUBLIC_SITE_URL + "/cancel",
         metadata: { plan }
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.ZIINA_API_KEY}`,
+          Authorization: "Bearer " + process.env.ZIINA_API_KEY,
           "Content-Type": "application/json"
         }
       }
     );
 
-    res.json({
-      redirect_url: ziinaResponse.data.redirect_url,
-      id: ziinaResponse.data.id
-    });
+    const { redirect_url, id } = ziinaResponse.data;
+
+    return res.status(200).json({ redirect_url, id });
+
   } catch (err) {
     console.error("Ziina error:", err.response?.data || err.message);
-    res.status(500).json({ error: "Failed to create payment intent" });
+    return res.status(500).json({ error: "Failed to create payment intent" });
   }
 }
